@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Image Model - p5.js and ml5.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/addons/p5.dom.min.js"></script>
+    <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
+    <script>
+        // Wait for all libraries to load
+        window.addEventListener('load', function () {
+            // Check if ml5 is available
+            if (typeof ml5 !== 'undefined') {
+                console.log('ml5.js loaded successfully');
+            } else {
+                console.error('ml5.js failed to load');
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <div>Teachable Machine Image Model - p5.js and ml5.js</div>
+    <script src="sketch.js"></script>
+</body>
+
+</html>
