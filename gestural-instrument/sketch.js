@@ -38,6 +38,16 @@ let visualFeedback = {
     color: [255, 255, 255]
 };
 
+// Sound wave visualization
+let soundWave = {
+    samples: [],
+    maxSamples: 100,
+    amplitude: 0,
+    frequency: 0,
+    material: '',
+    confidence: 0
+};
+
 // Load the model first
 function preload() {
     // Check if ml5 is available before using it
@@ -118,6 +128,9 @@ function draw() {
     // Update gesture controls
     updateGestureControls();
 
+    // Update sound wave
+    updateSoundWave();
+
     // Draw visual feedback
     drawVisualFeedback();
 
@@ -168,10 +181,155 @@ function drawVisualFeedback() {
         ellipse(width - 130, 100, 80, 80);
     }
 
-    // Draw confidence indicator
-    let confidenceY = map(gestureControls.confidence, 0, 1, height - 100, 100);
+    // Draw confidence scale axis line (behind indicator)
+    stroke(100, 100, 100, 150);
+    strokeWeight(1);
+    line(width - 80, 100, width - 80, 350);
+
+    // Draw confidence indicator (reduced range to avoid overlap with sound wave)
+    let confidenceY = map(gestureControls.confidence, 0, 1, 350, 100);
     fill(255);
     ellipse(width - 80, confidenceY, 20, 20);
+
+    // Draw confidence scale
+    fill(150, 150, 150, 200);
+    textSize(10);
+    textAlign(LEFT);
+
+    // Top value (1.0)
+    text('1.0', width - 60, 95);
+
+    // Bottom value (0.0)
+    text('0.0', width - 60, 355);
+
+    // Current value
+    fill(255, 255, 255, 200);
+    text(`${gestureControls.confidence.toFixed(2)}`, width - 60, confidenceY + 3);
+
+    // Draw sound wave
+    drawSoundWave();
+}
+
+// Update sound wave data
+function updateSoundWave() {
+    if (gestureControls.onOff) {
+        // Generate wave data based on material and confidence
+        let material = soundMapping[label];
+        if (material) {
+            soundWave.frequency = getMaterialFrequency(material);
+            soundWave.amplitude = gestureControls.confidence;
+            soundWave.material = label;
+            soundWave.confidence = gestureControls.confidence;
+
+            // Add new sample with more complex wave
+            let time = millis() * 0.01;
+            let baseWave = sin(time * soundWave.frequency * 0.01);
+            let harmonic = sin(time * soundWave.frequency * 0.02) * 0.3; // Second harmonic
+            let sample = (baseWave + harmonic) * soundWave.amplitude * 30;
+            soundWave.samples.push(sample);
+
+            // Keep only recent samples
+            if (soundWave.samples.length > soundWave.maxSamples) {
+                soundWave.samples.shift();
+            }
+        }
+    } else {
+        // Fade out when sound is off
+        soundWave.samples = [];
+        soundWave.amplitude = 0;
+        soundWave.material = '';
+        soundWave.confidence = 0;
+    }
+}
+
+// Draw sound wave visualization
+function drawSoundWave() {
+    let waveX = width - 130;
+    let waveY = 450; // Moved much further down to avoid indicator overlap (indicator range: 100-500)
+    let waveWidth = 150; // Made wider
+    let waveHeight = 80; // Made taller
+
+    // Draw wave background
+    fill(0, 0, 0, 120);
+    noStroke();
+    rect(waveX - 75, waveY - 40, waveWidth, waveHeight);
+
+    // Draw grid lines
+    stroke(50, 50, 50, 100);
+    strokeWeight(1);
+    for (let i = 0; i <= 4; i++) {
+        let y = waveY - 40 + (i * waveHeight / 4);
+        line(waveX - 75, y, waveX + 75, y);
+    }
+
+    // Draw X and Y axes
+    stroke(100, 100, 100, 150);
+    strokeWeight(2);
+
+    // Y-axis (vertical center line)
+    line(waveX, waveY - 40, waveX, waveY + 40);
+
+    // X-axis (horizontal center line)
+    line(waveX - 75, waveY, waveX + 75, waveY);
+
+    if (soundWave.samples.length >= 2) {
+        // Draw wave line
+        stroke(255, 255, 255, 220);
+        strokeWeight(1.5);
+        noFill();
+
+        beginShape();
+        for (let i = 0; i < soundWave.samples.length; i++) {
+            let x = map(i, 0, soundWave.samples.length - 1, waveX - 75, waveX + 75);
+            let y = waveY + soundWave.samples[i];
+            vertex(x, y);
+        }
+        endShape();
+
+        // Draw amplitude envelope
+        stroke(255, 255, 0, 150);
+        strokeWeight(1);
+        line(waveX - 75, waveY - soundWave.amplitude * 30, waveX + 75, waveY - soundWave.amplitude * 30);
+        line(waveX - 75, waveY + soundWave.amplitude * 30, waveX + 75, waveY + soundWave.amplitude * 30);
+    }
+
+    // Draw detailed information
+    fill(255, 255, 255, 200);
+    noStroke();
+    textSize(12);
+    textAlign(CENTER);
+
+    // Material name
+    text(soundWave.material || 'No Material', waveX, waveY - 50);
+
+    // Axis labels
+    fill(150, 150, 150, 200);
+    textSize(10);
+    textAlign(CENTER);
+
+    // Y-axis label (Amplitude)
+    push();
+    translate(waveX - 85, waveY);
+    rotate(-PI / 2);
+    text('Amplitude', 0, 0);
+    pop();
+
+    // X-axis label (Time)
+    text('Time', waveX, waveY + 50);
+
+    // Data values below the graph with proper vertical spacing
+    fill(255, 255, 255, 200);
+    textSize(11);
+    textAlign(CENTER);
+
+    // Frequency
+    text(`Freq: ${Math.round(soundWave.frequency)}Hz`, waveX, waveY + 80);
+
+    // Confidence
+    text(`Conf: ${(soundWave.confidence * 100).toFixed(1)}%`, waveX, waveY + 95);
+
+    // Amplitude
+    text(`Amp: ${soundWave.amplitude.toFixed(2)}`, waveX, waveY + 110);
 }
 
 // Get material color
